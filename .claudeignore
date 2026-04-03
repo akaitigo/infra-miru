@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+vendor/
+coverage.out
+coverage/
+postgres_data/
+*.lock
+package-lock.json
