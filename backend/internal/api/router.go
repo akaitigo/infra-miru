@@ -49,6 +49,8 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 		if deps != nil {
 			r.Get("/resources", ResourceHandler(deps.PodLister, deps.Analyzer))
 			r.Get("/recommendations", RecommendationHandler(deps.PodLister, deps.Analyzer, deps.Calculator))
+			r.Get("/schedules", ScheduleHandler(deps.PodLister, deps.Analyzer))
+			r.Get("/cronhpa/{deployment}", CronHPAHandler(deps.PodLister, deps.Analyzer))
 		}
 	})
 
