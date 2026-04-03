@@ -15,7 +15,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	router := api.NewRouter()
+	router := api.NewRouter(nil)
 	srv := api.NewServer(cfg.Port, router)
 
 	log.Printf("infra-miru server starting on port %s", cfg.Port)

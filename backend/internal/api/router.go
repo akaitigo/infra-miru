@@ -6,12 +6,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	"github.com/akaitigo/infra-miru/backend/internal/analyzer"
+	"github.com/akaitigo/infra-miru/backend/internal/cost"
 )
 
 const requestTimeout = 60 * time.Second
 
+// RouterDeps holds optional dependencies for registering resource-related routes.
+// When nil, only the health endpoint is registered.
+type RouterDeps struct {
+	PodLister  PodLister
+	Analyzer   *analyzer.Analyzer
+	Calculator *cost.Calculator
+}
+
 // NewRouter creates and configures a chi router with middleware and routes.
-func NewRouter() *chi.Mux {
+// Pass nil for deps to register only the health endpoint (useful for tests).
+func NewRouter(deps *RouterDeps) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middleware stack
@@ -33,6 +45,11 @@ func NewRouter() *chi.Mux {
 	// Routes
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", HealthHandler())
+
+		if deps != nil {
+			r.Get("/resources", ResourceHandler(deps.PodLister, deps.Analyzer))
+			r.Get("/recommendations", RecommendationHandler(deps.PodLister, deps.Analyzer, deps.Calculator))
+		}
 	})
 
 	return r

@@ -60,7 +60,7 @@ func TestHealthHandler(t *testing.T) {
 func TestHealthHandlerViaRouter(t *testing.T) {
 	t.Parallel()
 
-	router := api.NewRouter()
+	router := api.NewRouter(nil)
 	srv := httptest.NewServer(router)
 	defer srv.Close()
 
