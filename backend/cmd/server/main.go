@@ -1,14 +1,26 @@
+// Package main is the entrypoint for the Infra-Miru API server.
 package main
 
 import (
-	"fmt"
-	"os"
+	"context"
+	"log"
+
+	"github.com/akaitigo/infra-miru/backend/internal/api"
+	"github.com/akaitigo/infra-miru/backend/internal/config"
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
 	}
-	fmt.Printf("infra-miru server starting on port %s\n", port)
+
+	router := api.NewRouter()
+	srv := api.NewServer(cfg.Port, router)
+
+	log.Printf("infra-miru server starting on port %s", cfg.Port)
+
+	if err := srv.Run(context.Background()); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
 }
