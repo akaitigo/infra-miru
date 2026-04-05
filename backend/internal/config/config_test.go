@@ -16,6 +16,8 @@ func setAllEnvVars(t *testing.T) {
 	t.Setenv("DB_NAME", "testdb")
 	t.Setenv("KUBECONFIG", "/home/test/.kube/config")
 	t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
+	t.Setenv("JWT_SECRET", "test-jwt-secret")
+	t.Setenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
 }
 
 func clearAllEnvVars(t *testing.T) {
@@ -23,6 +25,7 @@ func clearAllEnvVars(t *testing.T) {
 	for _, key := range []string{
 		"PORT", "DB_HOST", "DB_PORT", "DB_USER",
 		"DB_PASSWORD", "DB_NAME", "KUBECONFIG", "PROMETHEUS_URL",
+		"JWT_SECRET", "CORS_ORIGINS",
 	} {
 		t.Setenv(key, "")
 	}
@@ -57,6 +60,12 @@ func TestLoad_AllRequiredVarsSet(t *testing.T) {
 	if cfg.PrometheusURL != "http://prometheus:9090" {
 		t.Errorf("PrometheusURL = %q, want %q", cfg.PrometheusURL, "http://prometheus:9090")
 	}
+	if cfg.JWTSecret != "test-jwt-secret" {
+		t.Errorf("JWTSecret = %q, want %q", cfg.JWTSecret, "test-jwt-secret")
+	}
+	if len(cfg.CORSOrigins) != 2 {
+		t.Errorf("CORSOrigins length = %d, want 2", len(cfg.CORSOrigins))
+	}
 }
 
 func TestLoad_DefaultPort(t *testing.T) {
@@ -66,6 +75,7 @@ func TestLoad_DefaultPort(t *testing.T) {
 	t.Setenv("DB_PASSWORD", "testpass")
 	t.Setenv("DB_NAME", "testdb")
 	t.Setenv("KUBECONFIG", "/home/test/.kube/config")
+	t.Setenv("JWT_SECRET", "test-jwt-secret")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -79,37 +89,43 @@ func TestLoad_DefaultPort(t *testing.T) {
 
 func TestLoad_MissingRequiredVars(t *testing.T) {
 	tests := []struct {
-		name    string
 		setVars map[string]string
+		name    string
 	}{
 		{
 			name: "missing DB_HOST",
 			setVars: map[string]string{
-				"DB_USER": "u", "DB_PASSWORD": "p", "DB_NAME": "d", "KUBECONFIG": "/k",
+				"DB_USER": "u", "DB_PASSWORD": "p", "DB_NAME": "d", "KUBECONFIG": "/k", "JWT_SECRET": "s",
 			},
 		},
 		{
 			name: "missing DB_USER",
 			setVars: map[string]string{
-				"DB_HOST": "h", "DB_PASSWORD": "p", "DB_NAME": "d", "KUBECONFIG": "/k",
+				"DB_HOST": "h", "DB_PASSWORD": "p", "DB_NAME": "d", "KUBECONFIG": "/k", "JWT_SECRET": "s",
 			},
 		},
 		{
 			name: "missing DB_PASSWORD",
 			setVars: map[string]string{
-				"DB_HOST": "h", "DB_USER": "u", "DB_NAME": "d", "KUBECONFIG": "/k",
+				"DB_HOST": "h", "DB_USER": "u", "DB_NAME": "d", "KUBECONFIG": "/k", "JWT_SECRET": "s",
 			},
 		},
 		{
 			name: "missing DB_NAME",
 			setVars: map[string]string{
-				"DB_HOST": "h", "DB_USER": "u", "DB_PASSWORD": "p", "KUBECONFIG": "/k",
+				"DB_HOST": "h", "DB_USER": "u", "DB_PASSWORD": "p", "KUBECONFIG": "/k", "JWT_SECRET": "s",
 			},
 		},
 		{
 			name: "missing KUBECONFIG",
 			setVars: map[string]string{
-				"DB_HOST": "h", "DB_USER": "u", "DB_PASSWORD": "p", "DB_NAME": "d",
+				"DB_HOST": "h", "DB_USER": "u", "DB_PASSWORD": "p", "DB_NAME": "d", "JWT_SECRET": "s",
+			},
+		},
+		{
+			name: "missing JWT_SECRET",
+			setVars: map[string]string{
+				"DB_HOST": "h", "DB_USER": "u", "DB_PASSWORD": "p", "DB_NAME": "d", "KUBECONFIG": "/k",
 			},
 		},
 		{

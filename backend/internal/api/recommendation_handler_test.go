@@ -188,7 +188,7 @@ func TestRecommendationHandlerViaRouter(t *testing.T) {
 		PodLister:  lister,
 		Analyzer:   analyzer.NewAnalyzer(),
 		Calculator: cost.NewCalculator(),
-	})
+	}, nil)
 
 	srv := httptest.NewServer(router)
 	defer srv.Close()

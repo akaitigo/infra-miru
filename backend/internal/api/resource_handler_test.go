@@ -172,7 +172,7 @@ func TestResourceHandlerViaRouter(t *testing.T) {
 		PodLister:  lister,
 		Analyzer:   analyzer.NewAnalyzer(),
 		Calculator: nil, // not needed for resource endpoint
-	})
+	}, nil)
 
 	srv := httptest.NewServer(router)
 	defer srv.Close()
