@@ -19,6 +19,8 @@ type Config struct {
 	DBName        string
 	KubeConfig    string
 	PrometheusURL string
+	JWTSecret     string
+	CORSOrigins   []string
 }
 
 // DatabaseURL returns a PostgreSQL connection string built from the config fields.
@@ -41,6 +43,8 @@ func Load() (*Config, error) {
 		DBName:        os.Getenv("DB_NAME"),
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		PrometheusURL: os.Getenv("PROMETHEUS_URL"),
+		CORSOrigins:   parseCORSOrigins(os.Getenv("CORS_ORIGINS")),
+		JWTSecret:     os.Getenv("JWT_SECRET"),
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -62,6 +66,7 @@ func (c *Config) validate() error {
 		{name: "DB_PASSWORD", value: c.DBPassword},
 		{name: "DB_NAME", value: c.DBName},
 		{name: "KUBECONFIG", value: c.KubeConfig},
+		{name: "JWT_SECRET", value: c.JWTSecret},
 	}
 
 	var missing []string
@@ -86,4 +91,20 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return v
 	}
 	return defaultValue
+}
+
+// parseCORSOrigins splits a comma-separated CORS_ORIGINS value into a slice.
+// Returns sensible development defaults when the input is empty.
+func parseCORSOrigins(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{"http://localhost:3000", "http://localhost:8080"}
+	}
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			origins = append(origins, trimmed)
+		}
+	}
+	return origins
 }

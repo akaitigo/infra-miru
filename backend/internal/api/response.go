@@ -12,7 +12,7 @@ type ErrorResponse struct {
 }
 
 // JSON writes data as a JSON response with the given status code.
-func JSON(w http.ResponseWriter, status int, data interface{}) {
+func JSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 

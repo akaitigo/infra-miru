@@ -21,10 +21,22 @@ type RouterDeps struct {
 	Calculator *cost.Calculator
 }
 
+// RouterConfig holds configuration for the router middleware.
+type RouterConfig struct {
+	JWTSecret   string
+	CORSOrigins []string
+}
+
 // NewRouter creates and configures a chi router with middleware and routes.
 // Pass nil for deps to register only the health endpoint (useful for tests).
-func NewRouter(deps *RouterDeps) *chi.Mux {
+// Pass nil for cfg to use development defaults (no auth, localhost CORS).
+func NewRouter(deps *RouterDeps, cfg *RouterConfig) *chi.Mux {
 	r := chi.NewRouter()
+
+	corsOrigins := []string{"http://localhost:3000", "http://localhost:8080"}
+	if cfg != nil && len(cfg.CORSOrigins) > 0 {
+		corsOrigins = cfg.CORSOrigins
+	}
 
 	// Middleware stack
 	r.Use(middleware.RequestID)
@@ -34,7 +46,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.Timeout(requestTimeout))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:8080"},
+		AllowedOrigins:   corsOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -44,14 +56,22 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 
 	// Routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// Health endpoint is public (no auth required).
 		r.Get("/health", HealthHandler())
 
-		if deps != nil {
-			r.Get("/resources", ResourceHandler(deps.PodLister, deps.Analyzer))
-			r.Get("/recommendations", RecommendationHandler(deps.PodLister, deps.Analyzer, deps.Calculator))
-			r.Get("/schedules", ScheduleHandler(deps.PodLister, deps.Analyzer))
-			r.Get("/cronhpa/{deployment}", CronHPAHandler(deps.PodLister, deps.Analyzer))
-		}
+		// Protected routes require JWT authentication.
+		r.Group(func(r chi.Router) {
+			if cfg != nil && cfg.JWTSecret != "" {
+				r.Use(JWTAuth(cfg.JWTSecret))
+			}
+
+			if deps != nil {
+				r.Get("/resources", ResourceHandler(deps.PodLister, deps.Analyzer))
+				r.Get("/recommendations", RecommendationHandler(deps.PodLister, deps.Analyzer, deps.Calculator))
+				r.Get("/schedules", ScheduleHandler(deps.PodLister, deps.Analyzer))
+				r.Get("/cronhpa/{deployment}", CronHPAHandler(deps.PodLister, deps.Analyzer))
+			}
+		})
 	})
 
 	return r

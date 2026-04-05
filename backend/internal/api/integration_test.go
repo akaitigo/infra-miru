@@ -31,7 +31,7 @@ func integrationServer(lister *fakePodLister) *httptest.Server {
 		PodLister:  lister,
 		Analyzer:   analyzer.NewAnalyzer(),
 		Calculator: cost.NewCalculator(),
-	})
+	}, nil)
 	return httptest.NewServer(router)
 }
 

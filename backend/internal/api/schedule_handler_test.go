@@ -245,7 +245,7 @@ func TestCronHPAHandler(t *testing.T) {
 				PodLister:  tt.lister,
 				Analyzer:   analyzer.NewAnalyzer(),
 				Calculator: cost.NewCalculator(),
-			})
+			}, nil)
 
 			srv := httptest.NewServer(router)
 			defer srv.Close()
@@ -302,7 +302,7 @@ func TestScheduleHandlerViaRouter(t *testing.T) {
 		PodLister:  lister,
 		Analyzer:   analyzer.NewAnalyzer(),
 		Calculator: cost.NewCalculator(),
-	})
+	}, nil)
 
 	srv := httptest.NewServer(router)
 	defer srv.Close()
