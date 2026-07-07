@@ -15,8 +15,8 @@ import (
 
 const testJWTSecret = "test-secret-key-for-unit-tests"
 
-// buildJWT constructs a minimal HS256 JWT for testing.
-func buildJWT(t *testing.T, secret string, exp int64) string {
+// signJWT constructs and signs a minimal HS256 JWT from the given claims.
+func signJWT(t *testing.T, secret string, claims map[string]any) string {
 	t.Helper()
 
 	header, err := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT"})
@@ -24,17 +24,13 @@ func buildJWT(t *testing.T, secret string, exp int64) string {
 		t.Fatalf("marshal header: %v", err)
 	}
 
-	claims, err := json.Marshal(map[string]any{
-		"sub": "test-user",
-		"iat": time.Now().Unix(),
-		"exp": exp,
-	})
+	claimsJSON, err := json.Marshal(claims)
 	if err != nil {
 		t.Fatalf("marshal claims: %v", err)
 	}
 
 	headerB64 := base64.RawURLEncoding.EncodeToString(header)
-	claimsB64 := base64.RawURLEncoding.EncodeToString(claims)
+	claimsB64 := base64.RawURLEncoding.EncodeToString(claimsJSON)
 
 	signingInput := headerB64 + "." + claimsB64
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -42,6 +38,27 @@ func buildJWT(t *testing.T, secret string, exp int64) string {
 	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
 	return headerB64 + "." + claimsB64 + "." + sig
+}
+
+// buildJWT constructs a minimal HS256 JWT with sub, iat and exp claims.
+func buildJWT(t *testing.T, secret string, exp int64) string {
+	t.Helper()
+
+	return signJWT(t, secret, map[string]any{
+		"sub": "test-user",
+		"iat": time.Now().Unix(),
+		"exp": exp,
+	})
+}
+
+// buildJWTNoExp constructs an HS256 JWT that omits the exp claim entirely.
+func buildJWTNoExp(t *testing.T, secret string) string {
+	t.Helper()
+
+	return signJWT(t, secret, map[string]any{
+		"sub": "test-user",
+		"iat": time.Now().Unix(),
+	})
 }
 
 func TestJWTAuth(t *testing.T) {
@@ -84,6 +101,18 @@ func TestJWTAuth(t *testing.T) {
 		{
 			name:       "expired token",
 			authHeader: "Bearer " + buildJWT(t, testJWTSecret, time.Now().Add(-time.Hour).Unix()),
+			wantStatus: http.StatusUnauthorized,
+			wantCode:   "AUTH_INVALID",
+		},
+		{
+			name:       "missing exp claim is rejected",
+			authHeader: "Bearer " + buildJWTNoExp(t, testJWTSecret),
+			wantStatus: http.StatusUnauthorized,
+			wantCode:   "AUTH_INVALID",
+		},
+		{
+			name:       "zero exp claim is rejected",
+			authHeader: "Bearer " + buildJWT(t, testJWTSecret, 0),
 			wantStatus: http.StatusUnauthorized,
 			wantCode:   "AUTH_INVALID",
 		},
