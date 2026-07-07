@@ -115,7 +115,13 @@ func validateJWT(token string, secret []byte) error {
 		return fmt.Errorf("parse claims: %w", parseErr)
 	}
 
-	if claims.Exp > 0 && time.Now().Unix() > claims.Exp {
+	// The exp claim is mandatory: a missing or non-positive value would
+	// otherwise yield a token that never expires.
+	if claims.Exp <= 0 {
+		return fmt.Errorf("token missing exp claim")
+	}
+
+	if time.Now().Unix() > claims.Exp {
 		return fmt.Errorf("token expired")
 	}
 
